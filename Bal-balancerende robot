@@ -1,0 +1,106 @@
+Imports System.Globalization
+Imports System.IO.Ports
+Imports System.Text
+
+Public Class Form1
+    Dim dataToReceive As Integer
+    Dim time As Decimal
+    Dim _close As Boolean
+
+    Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+
+        CheckForIllegalCrossThreadCalls = False
+        'setup combobox
+        cboxComPort.Items.Add("Select COM port:")
+        cboxComPort.SelectedIndex = 0
+    End Sub
+
+    Private Sub cboxComPort_Click(sender As Object, e As EventArgs) Handles cboxComPort.Click
+        'add all com ports to combobox
+        cboxComPort.Items.Clear()
+        cboxComPort.Items.Add("Select COM port:")
+        cboxComPort.Items.AddRange(SerialPort.GetPortNames())
+    End Sub
+
+
+
+    Private Sub btnComPortInit_Click(sender As Object, e As EventArgs) Handles btnComPortInit.Click
+        'Setup com port
+
+
+
+        If cboxComPort.Text <> "" And cboxComPort.SelectedIndex() <> 0 Then
+
+
+            SerialPort1.PortName = cboxComPort.Text
+            SerialPort1.BaudRate = 9600
+            SerialPort1.DataBits = 8
+            SerialPort1.Parity = Parity.None
+            SerialPort1.StopBits = StopBits.One
+            SerialPort1.Handshake = Handshake.None
+            SerialPort1.Encoding = Encoding.Default
+            SerialPort1.ReadTimeOut = 1000
+            SerialPort1.WriteTimeOut = 1000
+
+            SerialPort1.Open()
+
+            btnComPortInit.Enabled = False
+            cboxComPort.Enabled = False
+            btnComportTerm.Enabled = True
+            NUDKp.Enabled = True
+            '   NUDKi.Enabled = True
+            '   NUDKd.Enabled = True
+            'NUDPIDmax.Enabled = True
+
+        End If
+    End Sub
+
+
+    Private Sub btnComportTerm_Click(sender As Object, e As EventArgs) Handles btnComportTerm.Click
+        btnComPortInit.Enabled = False
+        cboxComPort.Enabled = False
+        btnComportTerm.Enabled = False
+
+        Dim bytesToSend() As Byte = {&B111, 0, 0}
+
+        SerialPort1.Write(bytesToSend, 0, 3)
+
+        Timer1.Start()
+
+
+    End Sub
+
+    Private Sub NUDKp_SelectedItemChanged(Sender As Object, e As EventArgs) Handles NUDKp.SelectedItemChanged
+        If SerialPort1.IsOpen Then
+            Dim val As Decimal
+            Dim log As Integer
+            Dim mappedDec As Decimal
+            Dim mapped11bits As Integer
+            Dim bytesToSend(2) As Byte
+            Dim logIsNeg As Byte
+
+            val = NUDKp.Text
+            If val <> 0 Then
+                If val < 0.1 Then
+                    logIsNeg = &B10000000
+                    log = Int(Math.Log10(val) + 1)
+                    mappedDec = val / Math.Pow(10, log)
+                    mapped11bits = mappedDec * 2048
+                End If
+
+            End If
+
+            bytesToSend(0) = &B100
+            bytesToSend(1) = logIsNeg Or ((log And &B1111) << 3) Or ((mapped11bits >> 8) And &B111)
+            bytesToSend(2) = mapped11bits And &B11111111
+
+            SerialPort1.Write(bytesToSend, 0, 3)
+
+        End If
+
+
+    End Sub
+
+
+End Class
+
